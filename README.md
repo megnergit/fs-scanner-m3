@@ -23,7 +23,6 @@ This project focuses on **safe, reproducible, and observable** event publishing 
 - [Development Notes](#development-notes)
 - [Security Considerations](#security-considerations)
 - [License](#license)
-# fs-scanner-m3
 
 ---
 # END
