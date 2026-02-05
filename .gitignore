@@ -1,0 +1,84 @@
+# ======================
+# my own
+# ======================
+
+README
+FILESYSTEM_METADATA_TO_RABBITMQ
+.*~
+*~
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# virtual environments (uv / venv)
+.venv/
+.venv*/
+env/
+venv/
+
+# ======================
+# uv
+# ======================
+.uv/
+uv-cache/
+# Do commit uv.lock 
+# uv.lock
+
+# ======================
+# Build / distribution
+# ======================
+build/
+dist/
+*.egg-info/
+
+# ======================
+# Logs / runtime files
+# ======================
+*.log
+*.pid
+*.out
+
+# ======================
+# OS / Editor
+# ======================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ======================
+# Docker
+# ======================
+docker-compose.override.yml
+*.env
+
+# ======================
+# RabbitMQ / data
+# ======================
+data/*
+!data/.gitkeep
+
+rabbitmq_data/
+rabbitmq-data/
+
+# ======================
+# Tests / coverage
+# ======================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ======================
+# Temporary / misc
+# ======================
+tmp/
+temp/
