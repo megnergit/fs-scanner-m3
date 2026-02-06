@@ -1,11 +1,5 @@
 # fs-scanner-m3
 
-Filesystem scanner that detects file system events and publishes them to a message queue (RabbitMQ).
-
-This project focuses on **safe, reproducible, and observable** event publishing from a filesystem into a messaging pipeline.
-
----
-
 ## Table of Contents
 
 - [fs-scanner-m3](#fs-scanner-m3)
@@ -15,8 +9,10 @@ This project focuses on **safe, reproducible, and observable** event publishing 
     - [Build docker image for scanner](#build-docker-image-for-scanner)
     - [Run rabbitMQ and scanner](#run-rabbitmq-and-scanner)
   - [Check messages on rabbitmq web UI](#check-messages-on-rabbitmq-web-ui)
+    - [Open management UI](#open-management-ui)
+    - [Exchange](#exchange)
+    - [Queue and messages](#queue-and-messages)
   - [Check messages on rabbitmq CLI](#check-messages-on-rabbitmq-cli)
-
 ---
 ## How to run 
 
@@ -31,7 +27,8 @@ Please make sure you have docker execution environment on your machine.
 ---
 ### Create Test data directory  
 
-
+We will create a test directory structure locally, then 
+let it mount to the scanner container.
 
 ```python 
 uv run python src/fs2mq/utils/create_testdata.py  ./data --profile light
@@ -42,9 +39,8 @@ We have 3 profiles for testdata.
 | Profile | Purpose | Characteristics |
 |---------|---------|-----------------|
 | `light` | Quick sanity check | Shallow tree, few small files |
-| `deep` | Stress / traversal tests | Deep directory spine, exact file count |
-| `edge` | Robustness testing | Symlinks, permissions, FIFO, weird names |
-
+| `deep`  | Stress / traversal tests | Deep directory spine, exact file count |
+| `edge`  | Robustness testing | Symlinks, permissions, FIFO, weird names |
 
 After executing the command above, we should see test data directory at ```./data```
 ```sh
@@ -59,7 +55,7 @@ $ tree ./data
 ---
 ### Build docker image for scanner
 
-Copy `.env.example` to `.env` and adjust the values as needed:
+Copy `.env.example` to `.env` as needed.
 
 ```sh
 cp .env.example .env
@@ -96,21 +92,34 @@ CONTAINER ID   IMAGE                       COMMAND                  CREATED     
 1df1944d39a2   rabbitmq:4.2.3-management   "docker-entrypoint.s…"   45 seconds ago   Up 45 seconds ....
 ```
 
-Note that the scanner (fs2mq) has already exited after sending file metadata to a rabbitmq queue. 
+Note that the scanner (fs2mq) container has already exited after sending the 
+metadata of files to a rabbitmq queue. 
 
 ---
 ## Check messages on rabbitmq web UI
 
-First check if the exchange and queue have been created. 
+### Open management UI
 
 Open ```localhost:15672``` and log in with user name (= the value of the environment 
+
 variable ```RABBITMQ_USER``` and ```RABBITMQ_PASS```  in ```.env``` at the project root).
+
+If you did not change anything in `.env.example`, 
+
+- User: admin
+- Password: admin
+
+### Exchange
+
+We will check if the exchange and queue have been created. 
 
 ![Login](./images/login-1.png)
 
 Go to "Exchange" and make sure that there is ```fs2mq.ingress``` at the bottom. 
 
 ![Exchange](./images/exchange-1.png)
+
+### Queue and messages
 
 Then click on "Queues and Streams", and find a new queue `files`.
 
@@ -121,8 +130,6 @@ Click on the queue `files`, and find "Get Message(s) button.
 There should be the first message that rabbitmq received. 
 
 ![Messages](./images/message-1.png)
-
---
 
 ---
 ## Check messages on rabbitmq CLI
