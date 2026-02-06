@@ -13,6 +13,11 @@
     - [Exchange](#exchange)
     - [Queue and messages](#queue-and-messages)
   - [Check messages on rabbitmq CLI](#check-messages-on-rabbitmq-cli)
+  - [Parameters](#parameters)
+  - [End-to-End test](#end-to-end-test)
+    - [Clean up and clone repo](#clean-up-and-clone-repo)
+    - [Test 1 - Large file system](#test-1---large-file-system)
+    - [Test 2 - Tricky file system](#test-2---tricky-file-system)
 ---
 ## How to run 
 
@@ -33,6 +38,15 @@ into the scanner container.
 ```python 
 uv run python src/fs2mq/utils/create_testdata.py  ./data --profile light
 ```
+
+If [**`uv`**](https://docs.astral.sh/uv/getting-started/installation/) is 
+not available on your machine, 
+
+```sh
+$ brew install uv
+```
+
+for macos.
 
 There are **three** available test data **profiles.**
 
@@ -155,6 +169,86 @@ root@e88f7ddc9610:/# rabbitmqadmin -u admin -p admin -q files -c 10 | sed -n 's/
 {"run_id": "dcb7e0c9-9bfa-4025-b129-b15bacd913ea", "host": "097553a78290", "root": "/data", "path": "/data/level-0-dir-0/file-0-0.txt", "size": 64, "mtime_epoch": 1770341295}              │ string
 root@e88f7ddc9610:/#
 ```
+
+---
+## Parameters
+
+
+
+
+---
+## End-to-End test
+
+### Clean up and clone repo
+
+First clean up the development environment.
+
+```sh
+$ docker compose down -v
+$ docker stop rabbitmq
+$ docker rm rabbitmq fs2mq
+$ docker network rm fs2mq_default
+$ docker volume rm fs2mq_rabbitmq_data
+$ docker image rm fs2mq:0.1.0 rabbitmq:4.2.3-management
+```
+
+Check nothing left.
+```sh
+$ docker ps -a
+$ docker network ls
+$ docker volume ls
+$ docker images
+```
+
+Create an empty directory.
+```sh
+$ mkdir ./test
+$ cd ./test
+```
+
+Pull the git repo.
+```sh
+$ git clone https://github.com/megnergit/fs-scanner-m3.git
+```
+
+Check and get into it.
+```sh
+$ ls
+total 0
+drwxr-xr-x  16 meg  staff  512 Feb  6 09:02 fs-scanner-m3
+$ cd fs-scanner-m3
+```
+
+### Test 1 - Large file system
+
+If `uv` is not available on your machine, 
+
+
+```sh
+$ uv run python src/fs2mq/utils/create_testdata.py \
+   ./data --profile deep \
+   --depth 64 \
+   --target-files 10000
+```
+
+Check. 
+```sh
+$ tree ./data | wc
+   10067   20133 1568207
+```
+
+For the rest please go back to [Build docker image for scanner](#build-docker-image-for-scanner).
+
+
+### Test 2 - Tricky file system
+
+
+
+
+
+
+
+
 
 
 ---
