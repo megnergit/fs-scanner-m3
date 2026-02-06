@@ -11,6 +11,7 @@ import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterator, Optional, Tuple
+import traceback
 
 import pika
 
@@ -51,22 +52,16 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
     - Skips symlinks.
     - Handles PermissionError/OSError robustly (continues scan).
     """
-    # Use os.walk for robust error callbacks
     def onerror(err: OSError) -> None:
-        # Print to stderr but do not crash
         print(f"[WARN] walk error: {err}", file=sys.stderr)
 
     for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, followlinks=False):
-        # Optional: prune unreadable dirs (os.walk already calls onerror)
-        # We also protect stat calls below.
         for name in filenames:
             p = Path(dirpath) / name
             try:
-                # Skip symlinks explicitly (even if os.walk gives them as files)
                 if p.is_symlink():
                     continue
                 st = p.stat()
-                # Only regular files
                 if not os.path.isfile(p):
                     continue
                 yield p, st
@@ -95,16 +90,13 @@ def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection, pika.adapters.b
     params = pika.URLParameters(cfg.amqp_url)
     params.heartbeat = 30
     params.blocked_connection_timeout = 60
-    # Optional: shorter socket timeouts so failures are detected quickly
     params.socket_timeout = 10
 
     conn = pika.BlockingConnection(params)
     ch = conn.channel()
 
-    # Enable publisher confirms (robustness)
     ch.confirm_delivery()
 
-    # Declare exchange/queue/binding idempotently
     ch.exchange_declare(exchange=cfg.exchange, exchange_type="direct", durable=cfg.durable)
     ch.queue_declare(queue=cfg.queue_name, durable=cfg.durable)
     ch.queue_bind(queue=cfg.queue_name, exchange=cfg.exchange, routing_key=cfg.routing_key)
@@ -121,14 +113,12 @@ def publish_file_event(
 
     props = pika.BasicProperties(
         content_type="application/json",
-        delivery_mode=2,  # persistent
+        delivery_mode=2,
         timestamp=_now_epoch(),
         app_id="fs2mq",
         type="file.found",
     )
 
-    # mandatory=True makes unroutable messages returnable (if no binding)
-    # with confirms, basic_publish returns True/False for acked/nacked
     try:
         ok = ch.basic_publish(
             exchange=cfg.exchange,
@@ -139,7 +129,6 @@ def publish_file_event(
         )
         return bool(ok)
     except pika.exceptions.UnroutableError as e:
-        # Should not happen if binding exists, but keep robust
         print(f"[ERROR] unroutable message: {e}", file=sys.stderr)
         return False
     except pika.exceptions.AMQPError as e:
@@ -148,17 +137,46 @@ def publish_file_event(
 
 
 # -----------------------------
-# CLI / main
+# CLI
 # -----------------------------
 
-def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        description="fs2mq: recursively scan a local filesystem and publish file metadata to RabbitMQ"
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(
+        description="fs2mq scanner: recursively scan a local filesystem and publish file metadata to RabbitMQ",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Show this help
+  uv run python src/fs2mq/scanner.py
+
+  # Dry-run (print events as JSON lines)
+  uv run python src/fs2mq/scanner.py --root ./data --dry-run --limit 10
+
+  # Publish to RabbitMQ (requires env vars)
+  AMQP_URL=amqp://... EXCHANGE=... ROUTING_KEY=... QUEUE_NAME=... \\
+    uv run python src/fs2mq/scanner.py --root ./data --log-every 100
+
+Environment variables (required unless --dry-run):
+  AMQP_URL     AMQP URL, e.g. amqp://user:pass@host:5672/vhost
+  EXCHANGE     Exchange name (direct)
+  ROUTING_KEY  Routing key for publishing
+  QUEUE_NAME   Queue name to bind
+
+Exit codes:
+  0 = success
+  2 = invalid usage / missing env / bad --root
+  3 = RabbitMQ connect/declare failure
+  4 = publishing had failures for some files
+""",
     )
+
+
+def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    p = build_parser()
     p.add_argument(
         "--root",
         type=Path,
-        required=True,
+        required=False,  # allow empty invocation -> show help
         help="Root directory to scan (will be scanned recursively)",
     )
     p.add_argument(
@@ -178,7 +196,7 @@ def parse_args() -> argparse.Namespace:
         default=100,
         help="Print progress every N published files (default: 100)",
     )
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 def load_rabbit_cfg_from_env() -> RabbitConfig:
@@ -197,8 +215,19 @@ def load_rabbit_cfg_from_env() -> RabbitConfig:
     )
 
 
+# -----------------------------
+# main
+# -----------------------------
+
 def main() -> int:
+    parser = build_parser()
     args = parse_args()
+
+    # If called without args (especially without --root), show help and exit 0.
+    if args.root is None:
+        parser.print_help()
+        return 0
+
     root = args.root.resolve()
 
     if not root.exists():
@@ -224,9 +253,12 @@ def main() -> int:
 
         try:
             conn, ch = connect(cfg)
+
         except Exception as e:
-            print(f"[ERROR] RabbitMQ connection/declare failed: {e}", file=sys.stderr)
+            print(f"[ERROR] RabbitMQ connection/declare failed: {type(e).__name__}: {e!r}", file=sys.stderr)
             return 3
+
+
 
     published = 0
     failed = 0
@@ -262,7 +294,10 @@ def main() -> int:
             if args.log_every > 0 and published > 0 and (published % args.log_every == 0):
                 elapsed = time.time() - t0
                 rate = published / elapsed if elapsed > 0 else 0.0
-                print(f"[INFO] published={published} failed={failed} scanned={scanned} rate={rate:.1f}/s", file=sys.stderr)
+                print(
+                    f"[INFO] published={published} failed={failed} scanned={scanned} rate={rate:.1f}/s",
+                    file=sys.stderr,
+                )
 
     finally:
         if conn is not None:
@@ -273,15 +308,15 @@ def main() -> int:
 
     elapsed = time.time() - t0
     rate = published / elapsed if elapsed > 0 else 0.0
-    print(f"[INFO] done run_id={run_id} published={published} failed={failed} scanned={scanned} elapsed={elapsed:.2f}s rate={rate:.1f}/s", file=sys.stderr)
+    print(
+        f"[INFO] done run_id={run_id} published={published} failed={failed} scanned={scanned} "
+        f"elapsed={elapsed:.2f}s rate={rate:.1f}/s",
+        file=sys.stderr,
+    )
 
-    # non-zero exit if publishing failed for any file (robust signal)
     return 0 if failed == 0 else 4
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
 
-# -----------------------------
-# END
-# =============================

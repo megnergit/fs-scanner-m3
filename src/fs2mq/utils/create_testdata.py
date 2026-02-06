@@ -251,10 +251,33 @@ def create_edge(base: Path, seed: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate test directory structures for fs2mq.",
-    )
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Light profile (default)
+  uv run python src/utils/create_testdata.py ./data
+
+  # Deep directory tree with exactly 500 files
+  uv run python src/utils/create_testdata.py ./data \\
+      --profile deep \\
+      --depth 8 \\
+      --target-files 500
+
+  # Edge cases (symlinks, permissions, FIFO, weird filenames)
+  uv run python src/utils/create_testdata.py ./data \\
+      --profile edge
+
+Notes:
+  - 'path' is the base directory where test data will be created.
+  - The deep profile guarantees exactly --target-files regular files.
+  - Some edge cases may be skipped depending on OS/filesystem permissions.
+""",
+    )        
+    
     parser.add_argument(
         "path",
         type=Path,
+        nargs="?",
         help="Base directory where test data will be created",
     )
     parser.add_argument(
@@ -291,6 +314,11 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # If called without a path, show help and exit cleanly.
+    if args.path is None:
+        parser.print_help()
+        return
 
     base = args.path.resolve()
     profile = args.profile

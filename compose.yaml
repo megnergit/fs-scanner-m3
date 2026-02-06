@@ -1,40 +1,44 @@
 services:
+  # rabbitmq
   rabbitmq:
-    image: rabbitmq:4.2-management
+    image: rabbitmq:4.2.3-management
     container_name: rabbitmq
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # Management UI
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "is_running"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  # あなたの fs2mq 側（例：publisher/consumer を同一イメージで動かす想定）
-  # コマンドはあなたの実装に合わせて差し替え
-  fs2mq:
-    build: .
+  # python code reading file system
+  scanner:
+    image: fs2mq:0.1.0
+    platform: linux/amd64
     container_name: fs2mq
     depends_on:
       rabbitmq:
         condition: service_healthy
-    environment:
-      AMQP_URL: amqp://admin:admin@rabbitmq:5672/%2F
-      # 例：あなたが exchange/queue 名を env で受け取れるならここに
-      EXCHANGE: fs2mq.ingress
-      QUEUE: files
-      ROUTING_KEY: file.found
+    env_file: 
+      - .env
     volumes:
-      - ./data:/data
-    # 例：consumer を起動するコマンド（要差し替え）
-    command: ["python", "-m", "fs2mq.consumer"]
+      - ./data:/data:ro
+    command:
+      - .venv/bin/python
+      - -m
+      - fs2mq.scanner
+      - --root
+      - /data
+      - --log-every
+      - "1000"
+
 
 volumes:
   rabbitmq_data:

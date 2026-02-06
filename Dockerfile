@@ -3,8 +3,8 @@ FROM --platform=linux/amd64 python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_NO_CACHE=1 \
-    UV_SYSTEM_PYTHON=1
+    UV_NO_CACHE=1 
+
 
 RUN addgroup --system app && adduser --system --ingroup app --home /app app
 WORKDIR /app
@@ -25,7 +25,14 @@ RUN uv sync --frozen --no-dev
 COPY . /app
 RUN chown -R app:app /app
 
-USER app
+# somehow scanner does not wait for rabbitmq
+# let shell script wait for rabbitmq
 
-CMD ["python", "-m", "fs2mq.scanner"]
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER app
+ENTRYPOINT ["/entrypoint.sh"]
+
+CMD ["/app/.venv/bin/python", "-m", "fs2mq.scanner"]
 # ---- END ----
