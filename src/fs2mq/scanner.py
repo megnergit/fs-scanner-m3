@@ -28,7 +28,7 @@ class FileEvent:
     path: str
     size: int
     mtime_epoch: int
-
+    
 
 def _now_epoch() -> int:
     return int(time.time())
@@ -86,7 +86,8 @@ class RabbitConfig:
     durable: bool = True
 
 
-def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection, pika.adapters.blocking_connection.BlockingChannel]:
+def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection, 
+                                        pika.adapters.blocking_connection.BlockingChannel]:
     params = pika.URLParameters(cfg.amqp_url)
     params.heartbeat = 30
     params.blocked_connection_timeout = 60
@@ -320,3 +321,6 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 
+# -----------------------------
+# END
+# -----------------------------

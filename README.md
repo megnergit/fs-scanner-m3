@@ -14,10 +14,14 @@
     - [Queue and messages](#queue-and-messages)
   - [Check messages on rabbitmq CLI](#check-messages-on-rabbitmq-cli)
   - [Parameters](#parameters)
+    - [Scanner](#scanner)
+    - [RabbitMQ](#rabbitmq)
   - [End-to-End test](#end-to-end-test)
     - [Clean up and clone repo](#clean-up-and-clone-repo)
     - [Test 1 - Large file system](#test-1---large-file-system)
-    - [Test 2 - Tricky file system](#test-2---tricky-file-system)
+    - [Test 2 - Special files](#test-2---special-files)
+    - [Test 3 - Irregular files and directories](#test-3---irregular-files-and-directories)
+
 ---
 ## How to run 
 
@@ -156,7 +160,7 @@ You can also check messages using the CLI.
 
 ```bash
 $ docker exec -it rabbitmq /bin/bash
-root@e88f7ddc9610:/# rabbitmqadmin -u admin -p admin -q files -c 10 | sed -n 's/.*│ \(.*path.*\) │.*/\1/p'
+root@e88f7ddc9610:/# rabbitmqadmin -u admin -p admin get messages -q files -c 10 | sed -n 's/.*│ \(.*path.*\) │.*/\1/p'
 {"run_id": "dcb7e0c9-9bfa-4025-b129-b15bacd913ea", "host": "097553a78290", "root": "/data", "path": "/data/edge-cases/weird-names/unicode-äöü.txt", "size": 32, "mtime_epoch": 1770318606}  │ string
 {"run_id": "dcb7e0c9-9bfa-4025-b129-b15bacd913ea", "host": "097553a78290", "root": "/data", "path": "/data/edge-cases/weird-names/space name.txt", "size": 32, "mtime_epoch": 1770318606}   │ string
 {"run_id": "dcb7e0c9-9bfa-4025-b129-b15bacd913ea", "host": "097553a78290", "root": "/data", "path": "/data/edge-cases/weird-names/brackets-[x].txt", "size": 32, "mtime_epoch": 1770318606} │ string
@@ -173,8 +177,84 @@ root@e88f7ddc9610:/#
 ---
 ## Parameters
 
+The runtime parameters for the scanner ('scanner.py' python code) and RabbitMQ 
+are configured by CLI options and the environment parametesr ```.env``` file, 
+respectively. 
+
+| Component  | Configuration.            | 
+|------------|---------------------------|
+| Scanner    | command line options.     |
+| RabbitMQ   | ```.env```                | 
+
+### Scanner
+
+A fully configured example to run code at the command line.
+
+```sh
+uv run python -m src/fs2mq/scanner.py --root ./data \
+                                      --log-every "1000" \
+                                      --dry-run \
+                                      --limit 1024 \
+                                      --log_every 100
+
+```
+
+**```--root PATH (required)```**
+Root directory to scan.
+example:  ```--root ./data```
+
+* Relative paths are allowed.
+* Internally resolved to an absolute path.
+
+**```--dry-run (optional)```**
+
+* Do not publish events to RabbitMQ.
+* Events are printed as JSON to stdout.
+* Useful for testing and inspection.
+example: ```--dry-run```
 
 
+**```--limit N (optional)```**
+* Stop after processing N events.
+* Counts successfully processed events (publish or dry-run output).
+example: ```--limit 1000```
+
+
+**```--log-every N (optional)```**
+* Print progress logs every N processed events.
+* Logs are written to stderr.
+example: ```--log-every 100```
+
+### RabbitMQ
+
+```sh
+$ cat .env.example
+
+# RabbitMQ (local)
+RABBITMQ_VHOST=/
+RABBITMQ_USER=admin
+RABBITMQ_PASS=admin
+
+# Messaging
+EXCHANGE=fs2mq.ingress
+ROUTING_KEY=file.found
+QUEUE_NAME=files
+
+# AMQP URL (URL-encode vhost)
+AMQP_URL=amqp://admin:admin@rabbitmq:5672/%2F
+```
+* The vhost / must be URL-encoded as %2F.
+* When using Docker Compose, ```.env``` is read automatically and injected into the container environment.
+
+* When running locally without Docker, ```.env``` is **not** loaded automatically (use source .env, etc.).
+* **AND** unset them on your shell when you switch to RabbitMQ running in a docker container.
+
+```sh: on your shell 
+$ unset RABBITMQ_VHOST
+$ unset RABBITMQ_USER
+$ unset RABBITMQ_PASS
+$ unset AMQP_URL
+```
 
 ---
 ## End-to-End test
@@ -188,6 +268,8 @@ $ docker compose down -v
 $ docker stop rabbitmq
 $ docker rm rabbitmq fs2mq
 $ docker network rm fs2mq_default
+$ docker volume rm fs-scanner-m3_rabbitmq_data
+$ docker volume rm rabbitmq_data
 $ docker volume rm fs2mq_rabbitmq_data
 $ docker image rm fs2mq:0.1.0 rabbitmq:4.2.3-management
 ```
@@ -200,10 +282,65 @@ $ docker volume ls
 $ docker images
 ```
 
+
+Delete environment variables that might be set on your shell.
+
+```sh
+$ unset RABBITMQ_VHOST
+$ unset RABBITMQ_USER
+$ unset RABBITMQ_PASS
+$ unset AMQP_URL
+```
+
+Check. 
+
+```sh
+$ env  | grep RABBITMQ
+$ env  | grep AMQP
+```
+
+For cut and paste. 
+
+```sh
+docker compose down -v
+docker compose stop rabbitmq
+docker rm rabbitmq fs2mq
+docker network rm fs-scanner-m3_default
+docker network rm fs2mq_default
+docker volume rm fs-scanner-m3_rabbitmq_data
+docker volume rm fs2mq_rabbitmq_data
+docker volume rm rabbitmq_data
+docker image rm fs2mq:0.1.0 rabbitmq:4.2.3-management
+
+docker ps -a
+docker network ls
+docker volume ls
+docker images
+
+unset RABBITMQ_VHOST
+unset RABBITMQ_USER
+unset RABBITMQ_PASS
+unset AMQP_URL
+
+env  | grep RABBITMQ
+env  | grep AMQP
+
+
+```
+
+** Quit docker desktop and start again. **
+
+After that 
+```sh
+$ docker login
+```
+if needed. 
+
 Create an empty directory.
 ```sh
 $ mkdir ./test
 $ cd ./test
+$ sudo rm -r ./fs-scanner-m3
 ```
 
 Pull the git repo.
@@ -239,16 +376,69 @@ $ tree ./data | wc
 
 For the rest please go back to [Build docker image for scanner](#build-docker-image-for-scanner).
 
+### Test 2 - Special files
 
-### Test 2 - Tricky file system
+Only difference is 
+
+```sh
+$ uv run python src/fs2mq/utils/create_testdata.py \
+   ./data --profile edge 
+```
+
+The rest is same with [Test 1 - Large file system](#test-1---large-file-system).
+
+### Test 3 - Irregular files and directories
+
+In the case we have a mix of directories of  **no read permission**
+and with a permission. 
+
+```sh
+sudo rm -rf ./data
+
+mkdir -p ./data/no-permission-dir
+touch ./data/no-permission-dir/file-1.txt
+chmod 000 ./data/no-permission-dir
+
+mkdir -p ./data/permission-dir
+touch ./data/permission-dir/file-2.txt
+```
+
+Do we have `file-2.txt` sent to queue?
+
+```sh
+$ docker exec -it rabbitmq /bin/bash
+# rabbitmqadmin -u admin -p admin get messages -q files -c 1 | sed -n 's/.*│ \(.*path.*\) │.*/\1/p'
+{"run_id": "374e8810-402c-4730-8575-fe8b4419a31d", "host": "158cc9d306cb", "root": "/data", "path": "/data/permission-dir/file-2.txt", "size": 0, "mtime_epoch": 1770369894} │ string
+```
+All right.
 
 
+In the case of **empty** directory.
 
+```sh
+$ sudo rm -rf ./data
+$ mkdir -p ./data/empty-dir
 
+$ mkdir -p ./data/permission-dir
+$ touch ./data/permission-dir/file-2.txt
+```
 
+In the case of **tricky** filename. 
 
+```sh
+sudo rm -rf ./data
+touch './data/weird name [;].txt'
 
+mkdir -p ./data/permission-dir
+touch ./data/permission-dir/file-2.txt
+```
 
+We have this one as well. 
 
+```sh
+$ docker exec -it rabbitmq /bin/bash
+root@dddf5ed3af13:/# rabbitmqadmin -u admin -p admin get messages -q files -c 1 | sed -n 's/.*│ \(.*path.*\) │.*/\1/p'
+{"run_id": "9d7a4b90-7d7b-42f0-a6b3-2530b4d54fde", "host": "32b82409ac48", "root": "/data", "path": "/data/weird name [;].txt", "size": 0, "mtime_epoch": 1770370645} │ string
+```
 
 ---
