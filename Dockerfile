@@ -24,15 +24,13 @@ RUN uv sync --frozen --no-dev
 # copy rest of app code
 COPY . /app
 RUN chown -R app:app /app
+RUN chmod +x /app/docker/entrypoint.sh
 
 # somehow scanner does not wait for rabbitmq
 # let shell script wait for rabbitmq
 
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 USER app
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 CMD ["/app/.venv/bin/python", "-m", "fs2mq.scanner"]
 # ---- END ----

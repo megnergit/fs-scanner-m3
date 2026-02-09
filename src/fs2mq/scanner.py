@@ -14,6 +14,7 @@ from typing import Iterator, Optional, Tuple
 import traceback
 
 import pika
+import hashlib
 
 
 # -----------------------------
@@ -28,7 +29,7 @@ class FileEvent:
     path: str
     size: int
     mtime_epoch: int
-    
+    sha256: str    
 
 def _now_epoch() -> int:
     return int(time.time())
@@ -62,7 +63,7 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
                 if p.is_symlink():
                     continue
                 st = p.stat()
-                if not os.path.isfile(p):
+                if not p.is_file():
                     continue
                 yield p, st
             except (PermissionError, FileNotFoundError) as e:
@@ -72,6 +73,20 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
                 print(f"[WARN] os error on file {p}: {e}", file=sys.stderr)
                 continue
 
+
+# -----------------------------
+# Calculate file hash (optional, can be expensive)
+# -----------------------------
+
+def calc_sha256(p: Path, buf_size: int = 1024 * 1024) -> str:
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        while True:
+            chunk = f.read(buf_size)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
 
 # -----------------------------
 # RabbitMQ
@@ -269,6 +284,22 @@ def main() -> int:
     try:
         for p, st in iter_files(root):
             scanned += 1
+
+            if args.dry_run:
+                sha256 = "DRY_RUN"
+            else:
+                try:
+                    sha256 = calc_sha256(p)
+                except (PermissionError, FileNotFoundError) as e:
+                    # cannot read, or somehow interrupted
+                    print(f"[WARN] cannot read file for sha256 {p}: {e}", file=sys.stderr)
+                    failed += 1
+                    continue
+                except OSError as e:
+                    print(f"[WARN] os error while hashing {p}: {e}", file=sys.stderr)
+                    failed += 1
+                    continue
+
             evt = FileEvent(
                 run_id=run_id,
                 host=host,

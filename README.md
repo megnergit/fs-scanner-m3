@@ -6,15 +6,19 @@
   - [Table of Contents](#table-of-contents)
   - [How to run](#how-to-run)
     - [Create Test data directory](#create-test-data-directory)
-    - [Build docker image for scanner](#build-docker-image-for-scanner)
+    - [Build Docker image for scanner](#build-docker-image-for-scanner)
     - [Run RabbitMQ and scanner](#run-rabbitmq-and-scanner)
-  - [Check messages on rabbitmq web UI](#check-messages-on-rabbitmq-web-ui)
+  - [Check messages on RabbitMQ web UI](#check-messages-on-rabbitmq-web-ui)
     - [Open management UI](#open-management-ui)
     - [Exchange](#exchange)
     - [Queue and messages](#queue-and-messages)
-  - [Check messages on rabbitmq CLI](#check-messages-on-rabbitmq-cli)
+  - [Check messages on RabbitMQ CLI](#check-messages-on-rabbitmq-cli)
   - [Parameters](#parameters)
     - [Scanner](#scanner)
+      - [`--root PATH` *(required)*](#--root-path-required)
+      - [`--dry-run (optional)`](#--dry-run-optional)
+      - [`--limit N (optional)`](#--limit-n-optional)
+      - [`--log-every N (optional)`](#--log-every-n-optional)
     - [RabbitMQ](#rabbitmq)
   - [End-to-End test](#end-to-end-test)
     - [Clean up and clone repo](#clean-up-and-clone-repo)
@@ -39,7 +43,7 @@ Please make sure you have a working **Docker** environment on your machine.
 We will create a test directory structure **locally** and mount it 
 into the scanner container.
 
-```python 
+```sh
 uv run python src/fs2mq/utils/create_testdata.py  ./data --profile light
 ```
 
@@ -50,9 +54,11 @@ not available on your machine,
 $ brew install uv
 ```
 
-for macos.
+for macOS.
 
 There are **three** available test data **profiles.**
+
+
 
 
 | Profile | Purpose | Characteristics |
@@ -61,7 +67,8 @@ There are **three** available test data **profiles.**
 | `deep`  | Stress / traversal tests | Deep directory spine, exact file count |
 | `edge`  | Robustness testing | Symlinks, permissions, FIFO, weird names |
 
-After executing the command above, we should see test data directory at ```./data```
+
+After executing the command above, a test data directory should be created at `./data`.
 
 ```sh
 $ tree ./data
@@ -73,7 +80,7 @@ $ tree ./data
 ```
 
 ---
-### Build docker image for scanner
+### Build Docker image for scanner
 
 **Copy** `.env.example` to `.env` and adjust values if needed.
 
@@ -104,7 +111,7 @@ Run
 $ docker compose up -d
 ```
 
-Check if the Rabbitmq container is running.
+Check if the RabbitMQ container is running.
 
 ```sh 
 $ docker ps -a
@@ -117,7 +124,7 @@ Note that the scanner (fs2mq) container **exits** automatically after sending
 file metadata to the RabbitMQ queue.
 
 ---
-## Check messages on rabbitmq web UI
+## Check messages on RabbitMQ web UI
 
 ### Open management UI
 
@@ -148,12 +155,12 @@ Click on the queue `files`, and find **Get Message(s)** button.
 
 ![Get Messages](./images/get-message-1.png)
 
-There should be the first message that rabbitmq received. 
+There should be the first message that RabbitMQ received. 
 
 ![Messages](./images/message-1.png)
 
 ---
-## Check messages on rabbitmq CLI
+## Check messages on RabbitMQ CLI
 
 You can also check messages using the CLI.
 
@@ -178,10 +185,10 @@ root@e88f7ddc9610:/#
 ## Parameters
 
 The runtime parameters for the scanner ('scanner.py' python code) and RabbitMQ 
-are configured by CLI options and the environment parametesr ```.env``` file, 
+are configured by CLI options and the environment parameters in ```.env``` file, 
 respectively. 
 
-| Component  | Configuration.            | 
+| Component  | Configuration             | 
 |------------|---------------------------|
 | Scanner    | command line options.     |
 | RabbitMQ   | ```.env```                | 
@@ -192,21 +199,20 @@ A fully configured example to run code at the command line.
 
 ```sh
 uv run python -m src/fs2mq/scanner.py --root ./data \
-                                      --log-every "1000" \
                                       --dry-run \
                                       --limit 1024 \
-                                      --log_every 100
+                                      --log-every 100
 
 ```
 
-**```--root PATH (required)```**
+#### `--root PATH` *(required)*
 Root directory to scan.
 example:  ```--root ./data```
 
 * Relative paths are allowed.
 * Internally resolved to an absolute path.
 
-**```--dry-run (optional)```**
+#### `--dry-run (optional)`
 
 * Do not publish events to RabbitMQ.
 * Events are printed as JSON to stdout.
@@ -214,13 +220,13 @@ example:  ```--root ./data```
 example: ```--dry-run```
 
 
-**```--limit N (optional)```**
+#### `--limit N (optional)`
 * Stop after processing N events.
 * Counts successfully processed events (publish or dry-run output).
 example: ```--limit 1000```
 
 
-**```--log-every N (optional)```**
+#### `--log-every N (optional)`
 * Print progress logs every N processed events.
 * Logs are written to stderr.
 example: ```--log-every 100```
@@ -247,7 +253,7 @@ AMQP_URL=amqp://admin:admin@rabbitmq:5672/%2F
 * When using Docker Compose, ```.env``` is read automatically and injected into the container environment.
 
 * When running locally without Docker, ```.env``` is **not** loaded automatically (use source .env, etc.).
-* **AND** unset them on your shell when you switch to RabbitMQ running in a docker container.
+* **AND** unset them on your shell when you switch to RabbitMQ running in a Docker container.
 
 ```sh: on your shell 
 $ unset RABBITMQ_VHOST
@@ -328,7 +334,8 @@ env  | grep AMQP
 
 ```
 
-** Quit docker desktop and start again. **
+**Quit Docker Desktop and start again.**
+
 
 After that 
 ```sh
@@ -374,7 +381,7 @@ $ tree ./data | wc
    10067   20133 1568207
 ```
 
-For the rest please go back to [Build docker image for scanner](#build-docker-image-for-scanner).
+For the rest please go back to [Build Docker image for scanner](#build-docker-image-for-scanner).
 
 ### Test 2 - Special files
 
