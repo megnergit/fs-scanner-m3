@@ -9,7 +9,14 @@ import string
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+import pdb
 
+# =============================
+# sandbox playground
+# =============================
+
+# p = Path('tmp1.txt')
+# _write_text_file(p, 64, random.Random(42))
 
 # =============================
 # Helpers
@@ -19,6 +26,9 @@ def _rand_text(n: int, rng: random.Random) -> str:
     alphabet = string.ascii_letters + string.digits
     return "".join(rng.choices(alphabet, k=n))
 
+# _rand_text(5, random.Random(42))
+# >>> string.ascii_letters
+# 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def _safe_mkdir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
@@ -27,7 +37,6 @@ def _safe_mkdir(p: Path) -> None:
 def _write_text_file(p: Path, size_bytes: int, rng: random.Random) -> None:
     # text file of roughly size_bytes (ASCII)
     p.write_text(_rand_text(size_bytes, rng))
-
 
 def _count_regular_files(root: Path) -> int:
     c = 0
@@ -40,14 +49,11 @@ def _count_regular_files(root: Path) -> int:
             continue
     return c
 
-
 def _warn(msg: str) -> None:
     print(f"[WARN] {msg}")
 
-
 def _info(msg: str) -> None:
     print(f"[INFO] {msg}")
-
 
 # =============================
 # Profiles
@@ -55,19 +61,22 @@ def _info(msg: str) -> None:
 
 @dataclass(frozen=True)
 class LightConfig:
+    # in light profile, we do not use depth. 
+    # it is always 1. 
     depth: int = 1
-    dirs_per_level: int = 2
-    files_per_dir: int = 3
+#    dirs_per_level: int = 2
+    files_per_dir: int = 4
     file_size: int = 64
-
 
 @dataclass(frozen=True)
 class DeepConfig:
     depth: int = 6
-    dirs_per_level: int = 2
+#    depth: int = 4
+#    dirs_per_level: int = 2
+#    dirs_per_level: int = 4
     target_files: int = 128
+#    target_files: int = 32
     file_size: int = 64
-
 
 @dataclass(frozen=True)
 class EdgeConfig:
@@ -77,7 +86,6 @@ class EdgeConfig:
     include_no_permission_dir: bool = True
     include_no_permission_file: bool = True
     include_weird_names: bool = True
-
 
 # -----------------------------
 # light case
@@ -99,13 +107,18 @@ def create_light(base: Path, seed: int) -> None:
 
     _info(f"Created ~{_count_regular_files(base)} regular files")
 
-
 # -----------------------------
 # deep case
 # -----------------------------
 
-def create_deep(base: Path, seed: int, depth: int, target_files: int, file_size: int) -> None:
-    cfg = DeepConfig(depth=depth, target_files=target_files, file_size=file_size)
+def create_deep(base: Path, seed: int, depth: int, 
+                target_files: int, file_size: int) -> None:
+# def create_deep(base: Path, seed: int) -> None:
+    cfg = DeepConfig(depth=depth, target_files=target_files, 
+                     file_size=file_size)
+    print(cfg)
+    pdb.set_trace()
+
     rng = random.Random(seed)
 
     _info(f"Creating DEEP profile at {base}")
@@ -249,6 +262,10 @@ def create_edge(base: Path, seed: int) -> None:
 # ============================
 
 def main() -> None:
+    # because it is currently only deep profile 
+    # that we can change the parameters
+    cfg = DeepConfig()
+
     parser = argparse.ArgumentParser(
         description="Generate test directory structures for fs2mq.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -297,19 +314,19 @@ Notes:
     parser.add_argument(
         "--depth",
         type=int,
-        default=6,
+        default=cfg.depth,
         help="Depth for the deep profile (default: 6)",
     )
     parser.add_argument(
         "--target-files",
         type=int,
-        default=128,
+        default=cfg.target_files,
         help="Total number of files for the deep profile (default: 128)",
     )
     parser.add_argument(
         "--file-size",
         type=int,
-        default=64,
+        default=cfg.file_size,
         help="Approx size of each generated text file in bytes (default: 64)",
     )
 
@@ -333,6 +350,7 @@ Notes:
             target_files=args.target_files,
             file_size=args.file_size,
         )
+#        create_deep(base, seed=args.seed)
     elif profile == "edge":
         create_edge(base, seed=args.seed)
     else:
