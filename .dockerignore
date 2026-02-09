@@ -1,4 +1,5 @@
 data/
+scan/
 __pycache__/
 *.pyc
 .venv/
