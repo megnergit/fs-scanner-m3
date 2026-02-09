@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+IMAGE="fs2mq:0.1.0"
+
+usage() {
+  cat <<EOF
+Usage:
+  fs2mq PATH [scanner options]
+
+Example:
+  fs2mq ./scan
+  fs2mq ./data --limit 10
+  fs2mq /mnt/input --dry-run
+EOF
+}
+
+if [[ "${1:-}" == "" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+ROOT="$1"
+shift
+
+if [[ ! -d "$ROOT" ]]; then
+  echo "[fs2mq] ERROR: not a directory: $ROOT" >&2
+  exit 1
+fi
+
+# build scanner (python) image, if it does not exist locally
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "[fs2mq] building image $IMAGE"
+  docker build -t "$IMAGE" .
+fi
+
+# absolute path（docker mount safety）
+ROOT_ABS="$(cd "$ROOT" && pwd)"
+
+set +e
+SCAN_DIR="$ROOT_ABS" docker compose run --rm scanner "$@"
+rc=$?
+set -e
+
+
+set +e
+docker compose run --rm \
+  -e SCAN_DIR="/scan" \
+  scanner "$@"
+rc=$?
+set -e
+
+echo
+echo "[fs2mq] RabbitMQ Management UI:"
+echo "         http://localhost:15672"
+
+exit $rc
+
+
+#--------
+# END
+#--------

@@ -4,7 +4,8 @@
 
 - [fs-scanner-m3](#fs-scanner-m3)
   - [Table of Contents](#table-of-contents)
-  - [How to run](#how-to-run)
+  - [Quick start](#quick-start)
+  - [How fs2mq runs](#how-fs2mq-runs)
     - [Create Test data directory](#create-test-data-directory)
     - [Build Docker image for scanner](#build-docker-image-for-scanner)
     - [Run RabbitMQ and scanner](#run-rabbitmq-and-scanner)
@@ -27,7 +28,19 @@
     - [Test 3 - Irregular files and directories](#test-3---irregular-files-and-directories)
 
 ---
-## How to run 
+## Quick start
+
+
+```sh
+fs2mq ./data
+```
+
+```./data``` is the directory that you want to scan and 
+send its metadata to RabbitMQ.
+
+
+---
+## How fs2mq runs
 
 We need to do 3 things. 
 
@@ -254,6 +267,10 @@ QUEUE_NAME=files
 
 # AMQP URL (URL-encode vhost)
 AMQP_URL=amqp://admin:admin@rabbitmq:5672/%2F
+
+# Default diretory to scan 
+SCAN_DIR=./data
+
 ```
 * The vhost / must be URL-encoded as %2F.
 * When using Docker Compose, ```.env``` is read automatically and injected into the container environment.
