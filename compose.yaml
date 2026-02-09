@@ -29,16 +29,28 @@ services:
     env_file: 
       - .env
     volumes:
-      - ./data:/data:ro
-    command:
-      - .venv/bin/python
-      - -m
-      - fs2mq.scanner
-      - --root
-      - /data
-      - --log-every
-      - "1000"
+      # we will give the directory to be scanned
+      # as an environment variable
+      # make sure to give scanner only read-only access
+      - ${SCAN_DIR}:/data:ro
 
+    # command:
+    #   - .venv/bin/python
+    #   - -m
+    #   - fs2mq.scanner
+    #   - --root
+    #   - /data
+    #   - --log-every
+    #   - "100"
+
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "[DEBUG] SCAN_DIR=$SCAN_DIR"
+        echo "[DEBUG] mounted /data contains:"
+        ls -la /data
+        exec .venv/bin/python -m fs2mq.scanner --root /data --log-every 100
 
 volumes:
   rabbitmq_data:

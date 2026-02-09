@@ -111,6 +111,12 @@ Run
 $ docker compose up -d
 ```
 
+In case if you would like to scan a directory other than ```./data```
+
+```sh
+$ SCAN_DIR=./scan docker compose up -d
+```
+
 Check if the RabbitMQ container is running.
 
 ```sh 
