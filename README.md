@@ -4,6 +4,7 @@
 
 - [fs-scanner-m3](#fs-scanner-m3)
   - [Table of Contents](#table-of-contents)
+  - [Architecture](#architecture)
   - [Quick start](#quick-start)
   - [How fs2mq works](#how-fs2mq-works)
     - [Create Test data directory](#create-test-data-directory)
@@ -26,6 +27,12 @@
     - [Test 1 - Large file system](#test-1---large-file-system)
     - [Test 2 - Special files](#test-2---special-files)
     - [Test 3 - Irregular files and directories](#test-3---irregular-files-and-directories)
+
+
+---
+## Architecture
+
+![Architecture](./image/arch-1.pdf)
 
 ---
 ## Quick start
@@ -199,6 +206,8 @@ root@e88f7ddc9610:/# rabbitmqadmin -u admin -p admin get messages -q files -c 10
 {"run_id": "dcb7e0c9-9bfa-4025-b129-b15bacd913ea", "host": "097553a78290", "root": "/data", "path": "/data/level-0-dir-0/file-0-0.txt", "size": 64, "mtime_epoch": 1770341295}              │ string
 root@e88f7ddc9610:/#
 ```
+
+
 
 ---
 ## Parameters
