@@ -41,6 +41,16 @@ def _get_host() -> str:
     except Exception:
         return "unknown-host"
 
+#==============================
+# sandbox playground 
+#==============================
+# for ii, js, ks in os.walk("./data"):
+#     print(f"ks = {ks}")
+#     for k in ks:
+#         print(f"k = {k}")
+#         print("=" * 20)
+    
+
 
 # -----------------------------
 # Filesystem scan
@@ -56,7 +66,8 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
     def onerror(err: OSError) -> None:
         print(f"[WARN] walk error: {err}", file=sys.stderr)
 
-    for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, followlinks=False):
+    for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, 
+                                                followlinks=False):
         for name in filenames:
             p = Path(dirpath) / name
             try:
