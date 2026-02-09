@@ -5,7 +5,7 @@
 - [fs-scanner-m3](#fs-scanner-m3)
   - [Table of Contents](#table-of-contents)
   - [Quick start](#quick-start)
-  - [How fs2mq runs](#how-fs2mq-runs)
+  - [How fs2mq works](#how-fs2mq-works)
     - [Create Test data directory](#create-test-data-directory)
     - [Build Docker image for scanner](#build-docker-image-for-scanner)
     - [Run RabbitMQ and scanner](#run-rabbitmq-and-scanner)
@@ -40,7 +40,7 @@ send its metadata to RabbitMQ.
 
 
 ---
-## How fs2mq runs
+## How fs2mq works
 
 We need to do 3 things. 
 
