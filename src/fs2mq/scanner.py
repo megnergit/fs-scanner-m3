@@ -307,6 +307,7 @@ def main() -> int:
                 path=str(p),
                 size=int(st.st_size),
                 mtime_epoch=int(st.st_mtime),
+                sha256=sha256,                    
             )
 
             if args.dry_run:
