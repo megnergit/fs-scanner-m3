@@ -307,7 +307,7 @@ Notes:
         "--seed",
         type=int,
         default=42,
-        help="Random seed for deterministic content (default: 42)",
+        help="Random seed for deterministic content (default: 42})",
     )
 
     # deep-specific knobs
@@ -315,19 +315,19 @@ Notes:
         "--depth",
         type=int,
         default=cfg.depth,
-        help="Depth for the deep profile (default: 6)",
+        help="Depth for the deep profile (default: {cfg.depth})",
     )
     parser.add_argument(
         "--target-files",
         type=int,
         default=cfg.target_files,
-        help="Total number of files for the deep profile (default: 128)",
+        help="Total number of files for the deep profile (default: {cfg.target_files})",
     )
     parser.add_argument(
         "--file-size",
         type=int,
         default=cfg.file_size,
-        help="Approx size of each generated text file in bytes (default: 64)",
+        help="Approx size of each generated text file in bytes (default: {cfg.file_size})",
     )
 
     args = parser.parse_args()
