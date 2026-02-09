@@ -32,7 +32,7 @@
 ---
 ## Architecture
 
-![Architecture](./images/arch-1.pdf)
+![Architecture](./images/arch-1.png)
 
 ---
 ## Quick start
