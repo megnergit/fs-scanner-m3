@@ -268,7 +268,7 @@ QUEUE_NAME=files
 # AMQP URL (URL-encode vhost)
 AMQP_URL=amqp://admin:admin@rabbitmq:5672/%2F
 
-# Default diretory to scan 
+# Default directory to scan 
 SCAN_DIR=./data
 
 ```
