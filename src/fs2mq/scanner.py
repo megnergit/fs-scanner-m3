@@ -51,7 +51,9 @@ def _get_host() -> str:
 #         print("=" * 20)
     
 
-
+# for i in iter_files("./data"):
+#     print(i)
+    
 # -----------------------------
 # Filesystem scan
 # -----------------------------
@@ -84,7 +86,6 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
                 print(f"[WARN] os error on file {p}: {e}", file=sys.stderr)
                 continue
 
-
 # -----------------------------
 # Calculate file hash (optional, can be expensive)
 # -----------------------------
@@ -93,7 +94,8 @@ def calc_sha256(p: Path, buf_size: int = 1024 * 1024) -> str:
     h = hashlib.sha256()
     with p.open("rb") as f:
         while True:
-            chunk = f.read(buf_size)
+            chunk = f.read(buf_size) # read 1M byte (stream hash)
+                                     # to protect memory
             if not chunk:
                 break
             h.update(chunk)
