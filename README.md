@@ -41,12 +41,11 @@
 ```sh
 fs2mq ./data
 ```
-
-```./data``` is the directory that you want to scan and 
+* ```./data``` is the directory that you want to scan and 
 send its metadata to RabbitMQ.
 
-Please make sure you have docker on your machine and it is running. 
-
+* Please make sure you have docker on your machine and it is running. 
+* Please copy ```.env.example``` to ```.env``` before you run ```fs2mq```
 
 ---
 ## How fs2mq works
