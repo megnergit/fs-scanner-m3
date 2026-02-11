@@ -1,121 +1,148 @@
 # fs-scanner-m3
 
+## Inhaltsverzeichnis
+
+- Architektur
+- Schnellstart
+- Funktionsweise
+- Parameter
+- End-to-End-Test
+- Engineering Notes
+- Lessons Learned
+
+---
 ## Architektur
 
 Dieses Projekt besteht aus zwei Komponenten:
 
--   **Scanner (Python)** -- durchsucht ein lokales Dateisystem rekursiv
-    und erzeugt Metadaten-Events.
--   **RabbitMQ** -- dient als Message Broker zur Aufnahme der Events.
+- **Scanner (Python)** – durchsucht rekursiv ein lokales Dateisystem und erzeugt Metadaten-Events.
+- **RabbitMQ** – dient als Message Broker zur Aufnahme dieser Events.
 
-Die Architektur ist bewusst minimal gehalten: Scanner → Direct Exchange
-→ Queue → (Consumer optional)
+Die Architektur ist bewusst minimal gehalten:
+
+Scanner → Direct Exchange → Queue → (optional Consumer)
 
 Es gibt keine zusätzliche API-Schicht.
 
-------------------------------------------------------------------------
-
+---
 ## Schnellstart
 
-``` bash
+```bash
 fs2mq ./data
 ```
 
-Voraussetzungen:
+- `./data` ist das Verzeichnis, das gescannt werden soll.
+- Docker muss installiert und aktiv sein.
+- `.env.example` muss zuvor nach `.env` kopiert werden.
 
--   Docker ist installiert und läuft.
--   `.env.example` wurde nach `.env` kopiert.
-
-------------------------------------------------------------------------
-
+---
 ## Funktionsweise
 
-1.  Testverzeichnis erstellen\
-2.  Docker-Image bauen\
-3.  `docker compose up` ausführen
+Es sind drei Schritte erforderlich:
 
-Der Scanner liest Dateien und sendet deren Metadaten als
-JSON-Nachrichten an RabbitMQ.
+1. Testverzeichnis erstellen
+2. Docker-Image bauen
+3. `docker compose up` ausführen
 
-------------------------------------------------------------------------
+Der Scanner liest Dateien und sendet deren Metadaten als JSON-Nachrichten an RabbitMQ.
 
-## Wichtige Parameter
+---
+## Parameter
 
 ### Scanner (CLI)
 
--   `--root PATH` -- Verzeichnis zum Scannen
--   `--dry-run` -- Nur Ausgabe als JSON, keine Veröffentlichung an
-    RabbitMQ
--   `--limit N` -- Maximale Anzahl Events
--   `--log-every N` -- Fortschrittsausgabe
+- `--root PATH` – Verzeichnis zum Scannen
+- `--dry-run` – Nur Ausgabe als JSON (keine Veröffentlichung an RabbitMQ)
+- `--limit N` – Maximale Anzahl Events
+- `--log-every N` – Fortschrittsausgabe
 
 ### RabbitMQ (.env)
 
--   `EXCHANGE`
--   `ROUTING_KEY`
--   `QUEUE_NAME`
--   `AMQP_URL`
+Konfiguration erfolgt über `.env`:
 
-------------------------------------------------------------------------
+- `EXCHANGE`
+- `ROUTING_KEY`
+- `QUEUE_NAME`
+- `AMQP_URL`
 
+Hinweis: Das VHost `/` muss als `%2F` URL-encodiert werden.
+
+---
+## End-to-End-Test
+
+Vor dem Test empfiehlt sich ein vollständiges Aufräumen der Docker-Umgebung:
+
+```bash
+docker compose down -v
+docker volume rm rabbitmq_data
+docker image rm fs2mq:0.1.0 rabbitmq:4.2.3-management
+```
+
+Danach kann das Repository neu geklont und getestet werden.
+
+---
 ## Engineering Notes
 
 ### Architektur-Scope
-
--   Scanner + RabbitMQ
--   Keine zusätzliche API-Schicht
+- Nur Scanner + RabbitMQ
+- Keine zusätzliche API-Schicht
 
 ### Infrastruktur
-
--   Docker Compose (angemessene Komplexität)
--   Kein Kubernetes (Overkill für lokalen Anwendungsfall)
--   Keine Cloud (Authentifizierung/Kosten nicht erforderlich)
+- Docker Compose (angemessene Komplexität)
+- Kein Kubernetes (Overkill für lokalen Einsatz)
+- Keine Cloud (Authentifizierungs- und Kosten-Overhead)
 
 ### Sprache
-
--   Python (schnelle Entwicklung)
--   Performance ist kein Hauptkriterium
+- Python (schnelle Entwicklung)
+- Performance ist kein Hauptkriterium
 
 ### Messaging & Zuverlässigkeit
 
 Zuverlässigkeit entsteht nicht durch eine einzelne Option:
 
--   durable Exchange
--   durable Queue
--   delivery_mode=2
--   publisher confirms
--   mandatory=True
+- durable Exchange
+- durable Queue
+- delivery_mode=2
+- Publisher Confirms
+- mandatory=True
+
+Zuverlässigkeit ist ein Zusammenspiel mehrerer Mechanismen.
 
 ### Fehlerbehandlung
+- Separate Behandlung von `UnroutableError` und `AMQPError`
+- Explizite Exit-Codes
 
--   Getrennte Behandlung von `UnroutableError` und `AMQPError`
--   Explizite Exit-Codes
+### Betriebsumfang
+- Kein HA-Cluster
+- Kein Backup (aktuell außerhalb des Scopes)
+- Kein CI/CD
 
-------------------------------------------------------------------------
+### Zukunft
+- CIS Docker Hardening
+- AMQPS (TLS)
 
+---
 ## Lessons Learned
 
 ### Scanner wartet nicht automatisch auf RabbitMQ
 
-Docker Healthchecks reichen nicht aus.\
+Docker Healthchecks reichen nicht aus.
 Der Scanner kann starten, bevor RabbitMQ vollständig bereit ist.
 
-Lösung: `entrypoint.sh`, das aktiv auf die Verfügbarkeit wartet.
+Lösung: Ein `entrypoint.sh`, das aktiv auf die Verfügbarkeit wartet.
 
 ### Passwortänderung in RabbitMQ
 
-RabbitMQ speichert Benutzerinformationen im Docker-Volume
-(`rabbitmq_data`).\
+RabbitMQ speichert Benutzerinformationen im Docker-Volume (`rabbitmq_data`).
 Eine Änderung in `.env` überschreibt diese Daten nicht automatisch.
-
 Das Volume muss explizit gelöscht werden.
 
 ### bool(None) ist False
 
-`bool(None)` ergibt `False`.\
-Das führte zu Fehlinterpretationen bei Rückgabewerten.
+`bool(None)` ergibt `False`.
+Das kann zu Fehlinterpretationen bei Rückgabewerten führen.
 
 ### Zuverlässigkeit ist mehrschichtig
 
-Nachrichtenpersistenz erfordert mehrere Mechanismen gleichzeitig. Es
-gibt keinen einzelnen „Reliability-Schalter".
+Nachrichtenpersistenz erfordert mehrere Mechanismen gleichzeitig.
+Es gibt keinen einzelnen „Reliability-Schalter“.
