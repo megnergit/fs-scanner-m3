@@ -114,21 +114,21 @@ class RabbitConfig:
     queue_name: str
     durable: bool = True
 
-
+# routing_key from .env
 # ==============================
 # Sandbox playground for RabbitMQ connection and publish
 # -----------------------------
 
-cfg = RabbitConfig(
-    amqp_url="amqp://admin:admin@localhost:5672/%2F",
-    exchange="fs2mq.ingress",
-    routing_key="file.found",
-    queue_name="files",
-    durable=True,
-    )
+# cfg = RabbitConfig(
+#     amqp_url="amqp://admin:admin@localhost:5672/%2F",
+#     exchange="fs2mq.ingress",
+#     routing_key="file.found",
+#     queue_name="files",
+#     durable=True,
+#     )
 
 
-x = connect(cfg)
+# x = connect(cfg)
 
 # ==============================
 def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection, 
@@ -143,11 +143,46 @@ def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection,
 
     ch.confirm_delivery()
 
-    ch.exchange_declare(exchange=cfg.exchange, exchange_type="direct", durable=cfg.durable)
+    ch.exchange_declare(exchange=cfg.exchange, exchange_type="direct", 
+                        durable=cfg.durable)
     ch.queue_declare(queue=cfg.queue_name, durable=cfg.durable)
-    ch.queue_bind(queue=cfg.queue_name, exchange=cfg.exchange, routing_key=cfg.routing_key)
+    ch.queue_bind(queue=cfg.queue_name, exchange=cfg.exchange, 
+                  routing_key=cfg.routing_key)
 
     return conn, ch
+
+
+# ==============================
+# sandbox
+# ------------------------------
+# evnt = list(iter_files('./data'))
+# evnt
+# root = Path("./data")
+# sha256 = calc_sha256(root / "file-l00-0000.txt")
+# p = Path("./data/file-l00-0000.txt") 
+# evt = FileEvent(
+#     run_id=2,
+#     host=host,
+#     root=str(root),
+#     path=str(p),
+#     size=int(evnt[0][1].st_size),
+#     mtime_epoch=int(evnt[0][1].st_mtime),
+#     sha256=sha256, 
+# )
+
+# # type(evt)
+# # evt
+
+# evnt[0]
+
+# conn, ch = connect(cfg)
+# print(cfg)
+# print(ch)
+# print(evt)
+# x= publish_file_event(ch, cfg, evt)
+# print(x)
+    
+# ==============================
 
 
 def publish_file_event(
@@ -157,6 +192,8 @@ def publish_file_event(
 ) -> bool:
     body = json.dumps(asdict(event), ensure_ascii=False).encode("utf-8")
 
+#    print(body)
+
     props = pika.BasicProperties(
         content_type="application/json",
         delivery_mode=2,
@@ -164,23 +201,26 @@ def publish_file_event(
         app_id="fs2mq",
         type="file.found",
     )
+    # metadata of a message
+    # app name, content type (json)
+#    print(props)
 
     try:
-        ok = ch.basic_publish(
+        ch.basic_publish(
             exchange=cfg.exchange,
             routing_key=cfg.routing_key,
             body=body,
             properties=props,
-            mandatory=True,
+            mandatory=True, # to return error if unroutable (e.g. no queue bound)
+                            # pika.exception.UnroutableError
         )
-        return bool(ok)
+        return True
     except pika.exceptions.UnroutableError as e:
         print(f"[ERROR] unroutable message: {e}", file=sys.stderr)
         return False
     except pika.exceptions.AMQPError as e:
         print(f"[ERROR] publish failed: {e}", file=sys.stderr)
         return False
-
 
 # -----------------------------
 # CLI
@@ -260,6 +300,12 @@ def load_rabbit_cfg_from_env() -> RabbitConfig:
         durable=True,
     )
 
+# ==============================
+# Sandbox playground for RabbitMQ connection and publish
+# -----------------------------
+
+# ==============================
+
 
 # -----------------------------
 # main
@@ -303,7 +349,6 @@ def main() -> int:
         except Exception as e:
             print(f"[ERROR] RabbitMQ connection/declare failed: {type(e).__name__}: {e!r}", file=sys.stderr)
             return 3
-
 
 
     published = 0

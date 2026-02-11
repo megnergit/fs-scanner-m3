@@ -79,9 +79,6 @@ for macOS.
 
 There are **three** available test data **profiles.**
 
-
-
-
 | Profile | Purpose | Characteristics |
 |---------|---------|-----------------|
 | `light` | Quick sanity check | Shallow tree, few small files |
