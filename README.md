@@ -351,6 +351,7 @@ $ env  | grep AMQP
 For cut and paste. 
 
 ```sh
+
 docker compose down -v
 docker compose stop rabbitmq
 docker rm rabbitmq fs2mq
@@ -564,11 +565,11 @@ value.
 Durability in RabbitMQ is not controlled by a single flag.
 
 Reliable message delivery requires:
-- durable exchange
-- durable queue
-- delivery_mode=2
-- publisher confirms
-- mandatory flag (for routing validation)
+- durable exchange (exchange remains after rebooting RabbitMQ) 
+- durable queue (queue remains after rebooting RabbitMQ) 
+- delivery_mode=2 (disk, not on memory)
+- publisher confirms (message reception acknowledged to scanner)
+- mandatory flag (for routing validation. messages that cannot be routed, will be returned)
 
 This clarified that messaging reliability
 is achieved through multiple layered mechanisms.
