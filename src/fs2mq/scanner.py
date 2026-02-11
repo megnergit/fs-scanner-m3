@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from importlib.resources import files
 import json
 import os
 import socket
@@ -15,7 +16,7 @@ import traceback
 
 import pika
 import hashlib
-
+import pdb
 
 # -----------------------------
 # Data model
@@ -114,6 +115,22 @@ class RabbitConfig:
     durable: bool = True
 
 
+# ==============================
+# Sandbox playground for RabbitMQ connection and publish
+# -----------------------------
+
+cfg = RabbitConfig(
+    amqp_url="amqp://admin:admin@localhost:5672/%2F",
+    exchange="fs2mq.ingress",
+    routing_key="file.found",
+    queue_name="files",
+    durable=True,
+    )
+
+
+x = connect(cfg)
+
+# ==============================
 def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection, 
                                         pika.adapters.blocking_connection.BlockingChannel]:
     params = pika.URLParameters(cfg.amqp_url)

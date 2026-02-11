@@ -45,6 +45,8 @@ fs2mq ./data
 ```./data``` is the directory that you want to scan and 
 send its metadata to RabbitMQ.
 
+Please make sure you have docker on your machine and it is running. 
+
 
 ---
 ## How fs2mq works
