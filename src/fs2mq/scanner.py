@@ -317,7 +317,7 @@ def main() -> int:
 
     # pdb.set_trace() 
 
-    # If called without args (especially without --root), show help and exit 0.
+    # if called without args (especially without --root), show help and exit 0.
     if args.root is None:
         parser.print_help()
         return 0
