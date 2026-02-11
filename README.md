@@ -27,6 +27,19 @@
     - [Test 1 - Large file system](#test-1---large-file-system)
     - [Test 2 - Special files](#test-2---special-files)
     - [Test 3 - Irregular files and directories](#test-3---irregular-files-and-directories)
+  - [Engineering Notes](#engineering-notes)
+    - [Architecture Scope](#architecture-scope)
+    - [Infrastructure Choices](#infrastructure-choices)
+    - [Language Choice](#language-choice)
+    - [Messaging \& Reliability](#messaging--reliability)
+    - [Error Handling](#error-handling)
+    - [Operational Scope](#operational-scope)
+    - [Future Considerations](#future-considerations)
+  - [Lesson learned](#lesson-learned)
+    - [Scanner does not wait for RabbitMQ](#scanner-does-not-wait-for-rabbitmq)
+    - [RabbitMQ password change](#rabbitmq-password-change)
+    - [```bool(None)``` is False](#boolnone-is-false)
+    - [Reliability is layered](#reliability-is-layered)
 
 
 ---
@@ -477,5 +490,92 @@ $ docker exec -it rabbitmq /bin/bash
 root@dddf5ed3af13:/# rabbitmqadmin -u admin -p admin get messages -q files -c 1 | sed -n 's/.*│ \(.*path.*\) │.*/\1/p'
 {"run_id": "9d7a4b90-7d7b-42f0-a6b3-2530b4d54fde", "host": "32b82409ac48", "root": "/data", "path": "/data/weird name [;].txt", "size": 0, "mtime_epoch": 1770370645} │ string
 ```
+
+---
+## Engineering Notes
+
+### Architecture Scope
+v Scanner + RabbitMQ only
+- No API layer (let us keep a minimal design)
+
+### Infrastructure Choices
+v Docker Compose 
+- No Kubernetes (overkill. Who else has kubernetes running on a laptop?)
+- No bare metal (requires Python env)
+- No VM (hypervisor needed)
+- No cloud (authentication, cost)
+
+### Language Choice
+- Python (can write fast)
+- Performance is not on a focus
+- Rust/Java/C++ (overkill?)
+
+### Messaging & Reliability
+- Direct exchange
+- Durable exchange and queue
+- delivery_mode=2 (persistent messages)
+- mandatory=True to detect unroutable messages
+- Publisher confirms enabled
+
+### Error Handling
+- Separate UnroutableError and AMQPError
+- Explicit exit codes
+
+### Operational Scope
+- No HA cluster (not required)
+- No backup yet
+- No CI/CD (not required at this stage)
+
+### Future Considerations
+- CIS Docker hardening
+- Security improvements (AMQPS)
+
+---
+## Lesson learned
+
+### Scanner does not wait for RabbitMQ
+
+... even when we set "healthcheck". 
+Scanner send messages before RabbitMQ is really really ready, 
+therefore the messages are lost, and no exchange/queue are 
+created. 
+
+We had to include ```entrypoint.sh``` to let scanner wait 
+until RabbitMQ is really really ready to receive messages. 
+
+
+### RabbitMQ password change
+
+RabbitMQ volume is created at the first execution of ```docker compose up```
+to store the initial password. 
+
+Even if we change the username and credential in ```.env```, they would 
+not override the database inside RabbigMQ ("Mnesia"). We have to remove 
+the docker  volume ```rabbitmq_data``` explicitly.
+
+### ```bool(None)``` is False
+
+When we would like to judge if the function finishes properly, 
+```bool(None)``` is false, even if None is a legitimate return 
+value. 
+
+### Reliability is layered
+
+Durability in RabbitMQ is not controlled by a single flag.
+
+Reliable message delivery requires:
+- durable exchange
+- durable queue
+- delivery_mode=2
+- publisher confirms
+- mandatory flag (for routing validation)
+
+This clarified that messaging reliability
+is achieved through multiple layered mechanisms.
+
+
+
+
+
 
 ---

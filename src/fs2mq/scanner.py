@@ -315,6 +315,8 @@ def main() -> int:
     parser = build_parser()
     args = parse_args()
 
+    # pdb.set_trace() 
+
     # If called without args (especially without --root), show help and exit 0.
     if args.root is None:
         parser.print_help()
@@ -332,6 +334,7 @@ def main() -> int:
     run_id = str(uuid.uuid4())
     host = _get_host()
 
+    # type hint. mainly for human
     cfg: Optional[RabbitConfig] = None
     conn: Optional[pika.BlockingConnection] = None
     ch: Optional[pika.adapters.blocking_connection.BlockingChannel] = None

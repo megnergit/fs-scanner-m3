@@ -2,8 +2,11 @@
 FROM --platform=linux/amd64 python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
+    PYTHONUNBUFFERED=1 \ 
     UV_NO_CACHE=1 
+
+# we do not create pyc
+# all logs are given real time without buffering 
 
 
 RUN addgroup --system app && adduser --system --ingroup app --home /app app
@@ -21,7 +24,9 @@ COPY src/ /app/src/
 # install actual dependency
 RUN uv sync --frozen --no-dev
 
+
 # copy rest of app code
+# we split COPY in 4 parts so that we can use docker layers efficiently. 
 COPY . /app
 RUN chown -R app:app /app
 RUN chmod +x /app/docker/entrypoint.sh
