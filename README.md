@@ -554,6 +554,9 @@ Even if we change the username and credential in ```.env```, they would
 not override the database inside RabbigMQ ("Mnesia"). We have to remove 
 the docker  volume ```rabbitmq_data``` explicitly.
 
+**NOTE** docker desktop for Mac is running inside a VM itself. 
+This means that we do not see docker volume at ```/var/lib/docker/volumes```.
+
 ### ```bool(None)``` is False
 
 When we would like to judge if the function finishes properly, 

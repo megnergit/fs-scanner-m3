@@ -8,7 +8,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # we do not create pyc
 # all logs are given real time without buffering 
 
-
 RUN addgroup --system app && adduser --system --ingroup app --home /app app
 WORKDIR /app
 
