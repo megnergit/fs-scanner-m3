@@ -2,14 +2,15 @@
 set -eu
 
 # for dry-run we do not wait for rabbitmq
-if [ "${DRY_RUN:-0}" != "1" ]; then
-  host="${AMQP_HOST:-rabbitmq}"
-  port="${AMQP_PORT:-5672}"
+# if [ "${DRY_RUN:-0}" != "1" ]; then
 
-  echo "[INFO] waiting for ${host}:${port}..."
+host="${AMQP_HOST:-rabbitmq}"
+port="${AMQP_PORT:-5672}"
+
+echo "[INFO] waiting for ${host}:${port}..."
 
 # small python code
-  python - <<'PY'
+python - <<'PY'
 import socket, time, os
 host = os.environ.get("AMQP_HOST", "rabbitmq")
 port = int(os.environ.get("AMQP_PORT", "5672"))

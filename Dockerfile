@@ -2,7 +2,7 @@
 FROM --platform=linux/amd64 python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \ 
+    PYTHONUNBUFFERED=1 \
     UV_NO_CACHE=1 
 
 # we do not create pyc

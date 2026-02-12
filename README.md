@@ -544,6 +544,10 @@ created.
 We had to include ```entrypoint.sh``` to let scanner wait 
 until RabbitMQ is really really ready to receive messages. 
 
+```entrypoint.sh``` is called from Dockerfile. This means 
+even if we set ```--dry-run``` at CLI, scanner container will 
+wait RabbitMQ, although it is not strictly necessary. 
+
 
 ### RabbitMQ password change
 

@@ -69,6 +69,7 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
     def onerror(err: OSError) -> None:
         print(f"[WARN] walk error: {err}", file=sys.stderr)
 
+    # os.walk returns tuple of list for each dirpath. dirpath is unique.
     for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, 
                                                 followlinks=False):
         for name in filenames:
@@ -92,10 +93,10 @@ def iter_files(root: Path) -> Iterator[Tuple[Path, os.stat_result]]:
 # -----------------------------
 
 def calc_sha256(p: Path, buf_size: int = 1024 * 1024) -> str:
-    h = hashlib.sha256()
+    h = hashlib.sha256() # engine
     with p.open("rb") as f:
         while True:
-            chunk = f.read(buf_size) # read 1M byte (stream hash)
+            chunk = f.read(buf_size) # read 1M byte at once (stream hash)
                                      # to protect memory
             if not chunk:
                 break
@@ -127,7 +128,6 @@ class RabbitConfig:
 #     durable=True,
 #     )
 
-
 # x = connect(cfg)
 
 # ==============================
@@ -136,7 +136,7 @@ def connect(cfg: RabbitConfig) -> Tuple[pika.BlockingConnection,
     params = pika.URLParameters(cfg.amqp_url)
     params.heartbeat = 30
     params.blocked_connection_timeout = 60
-    params.socket_timeout = 10
+    params.socket_timeout = 10 # TCP level
 
     conn = pika.BlockingConnection(params)
     ch = conn.channel()

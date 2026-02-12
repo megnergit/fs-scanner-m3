@@ -35,16 +35,14 @@ services:
       - ${SCAN_DIR}:/data:ro
   
     command:
-      - /bin/sh
-      - -c
-      - |
-          echo "[DEBUG] SCAN_DIR=$SCAN_DIR"
-          echo "[DEBUG] mounted /data contains:"
-          find /data
-          exec .venv/bin/python -m fs2mq.scanner \
-            --root /data \
-            --log-every 100 \
-            "$@"
+      - .venv/bin/python
+      - -m
+      - fs2mq.scanner
+      - --root
+      - /data
+      - --log-every
+      - "100"
+      # - --dry-run   # uncomment if you need it
 
 volumes:
   rabbitmq_data:
