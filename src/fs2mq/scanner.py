@@ -190,10 +190,12 @@ def publish_file_event(
     cfg: RabbitConfig,
     event: FileEvent,
 ) -> bool:
+    
     body = json.dumps(asdict(event), ensure_ascii=False).encode("utf-8")
 
 #    print(body)
 
+    # properties
     props = pika.BasicProperties(
         content_type="application/json",
         delivery_mode=2,
@@ -205,7 +207,7 @@ def publish_file_event(
     # app name, content type (json)
 #    print(props)
 
-    try:
+    try: # here we finally send the message to RabbitMQ.
         ch.basic_publish(
             exchange=cfg.exchange,
             routing_key=cfg.routing_key,
@@ -312,8 +314,8 @@ def load_rabbit_cfg_from_env() -> RabbitConfig:
 # -----------------------------
 
 def main() -> int:
-    parser = build_parser()
-    args = parse_args()
+    parser = build_parser() # help text in it
+    args = parse_args() # parameters
 
     # pdb.set_trace() 
 
@@ -338,6 +340,7 @@ def main() -> int:
     cfg: Optional[RabbitConfig] = None
     conn: Optional[pika.BlockingConnection] = None
     ch: Optional[pika.adapters.blocking_connection.BlockingChannel] = None
+    # blocking ~ synchronous
 
     if not args.dry_run:
         try:
@@ -359,6 +362,7 @@ def main() -> int:
     scanned = 0
     t0 = time.time()
 
+    # st : status , p: path
     try:
         for p, st in iter_files(root):
             scanned += 1
@@ -369,7 +373,7 @@ def main() -> int:
                 try:
                     sha256 = calc_sha256(p)
                 except (PermissionError, FileNotFoundError) as e:
-                    # cannot read, or somehow interrupted
+                    # cannot read, or somehow calc_sha256 is interrupted
                     print(f"[WARN] cannot read file for sha256 {p}: {e}", file=sys.stderr)
                     failed += 1
                     continue
@@ -388,11 +392,12 @@ def main() -> int:
                 sha256=sha256,                    
             )
 
-            if args.dry_run:
+            if args.dry_run: # just show the payload and do not touch RabbitMQ
                 print(json.dumps(asdict(evt), ensure_ascii=False))
                 published += 1
             else:
                 assert cfg is not None and ch is not None
+                # here send the file metadata to rabbitmq
                 ok = publish_file_event(ch, cfg, evt)
                 if ok:
                     published += 1
@@ -402,6 +407,7 @@ def main() -> int:
             if args.limit and published >= args.limit:
                 break
 
+            # show log every now and then
             if args.log_every > 0 and published > 0 and (published % args.log_every == 0):
                 elapsed = time.time() - t0
                 rate = published / elapsed if elapsed > 0 else 0.0
@@ -430,6 +436,7 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+    # because we would like a return value (exit code) from main.
 
 # -----------------------------
 # END
