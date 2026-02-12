@@ -22,7 +22,6 @@ while True:
         time.sleep(1)
 print("[INFO] rabbitmq is up.")
 PY
-fi
 
 # exec the main command
 exec "$@"

@@ -118,7 +118,7 @@ def create_deep(base: Path, seed: int, depth: int,
     cfg = DeepConfig(depth=depth, target_files=target_files, 
                      file_size=file_size)
     print(cfg)
-    pdb.set_trace()
+#    pdb.set_trace()
 
     rng = random.Random(seed)
 
