@@ -37,11 +37,6 @@ fi
 # absolute path（docker mount safety）
 ROOT_ABS="$(cd "$ROOT" && pwd)"
 
-set +e
-SCAN_DIR="$ROOT_ABS" docker compose run --rm scanner "$@"
-rc=$?
-set -e
-
 if [[ ! -f ".env" ]]; then
   echo "[fs2mq] ERROR: .env file not found."
   echo "Please copy .env.example to .env and adjust values:"
@@ -49,10 +44,9 @@ if [[ ! -f ".env" ]]; then
   exit 1
 fi
 
+# run scanner once
 set +e
-docker compose run --rm \
-  -e SCAN_DIR="/scan" \
-  scanner "$@"
+SCAN_DIR="$ROOT_ABS" docker compose run --rm scanner "$@"
 rc=$?
 set -e
 
