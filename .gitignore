@@ -65,6 +65,7 @@ docker-compose.override.yml
 # ======================
 data/*
 !data/.gitkeep
+scan/*
 
 rabbitmq_data/
 rabbitmq-data/
