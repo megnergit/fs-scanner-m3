@@ -65,7 +65,7 @@ class LightConfig:
     # it is always 1. 
     depth: int = 1
     dirs_per_level: int = 4
-#     target_files: int = 8 
+#    target_files: int = 8 
     files_per_dir: int = 4
     file_size: int = 64
 

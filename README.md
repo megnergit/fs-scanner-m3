@@ -418,6 +418,8 @@ $ uv run python src/fs2mq/utils/create_testdata.py \
    --depth 64 \
    --target-files 10000
 ```
+**NOTE** ```--target-files``` (with '-'). Not ```--target_files```(with '_').
+
 
 Check. 
 ```sh
