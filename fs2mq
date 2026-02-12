@@ -20,6 +20,15 @@ if [[ "${1:-}" == "" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
+# first read all env variables
+
+if [[ ! -f ".env" ]]; then
+  echo "[fs2mq] ERROR: .env file not found."
+  echo "Please copy .env.example to .env and adjust values:"
+  echo "  cp .env.example .env"
+  exit 1
+fi
+
 ROOT="$1"
 shift
 
@@ -37,12 +46,6 @@ fi
 # absolute path（docker mount safety）
 ROOT_ABS="$(cd "$ROOT" && pwd)"
 
-if [[ ! -f ".env" ]]; then
-  echo "[fs2mq] ERROR: .env file not found."
-  echo "Please copy .env.example to .env and adjust values:"
-  echo "  cp .env.example .env"
-  exit 1
-fi
 
 # run scanner once
 set +e
